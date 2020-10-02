@@ -1,0 +1,65 @@
+trigger:
+  branches:
+    include:
+    - master
+  paths:
+    include:
+    - terraform/*
+    exclude:
+    - terraform/domains/marketplace/*
+    - terraform/pipeline/*
+
+pr:
+  paths:
+    include:
+    - terraform/*
+    exclude:
+    - terraform/domains/marketplace/*
+    - terraform/pipeline/*
+
+pool:
+  name: 'Azure Pipelines'
+  vmImage: 'ubuntu-latest'
+
+variables:
+  isMaster: $[startsWith(variables['build.sourcebranch'], 'refs/heads/master')]
+  serviceConnection: 'terraform-pipeline'
+  tfVersion: '0.12.29'
+  environmentDirectory: 'terraform/domains/imm/env/sre'
+  backendAzureRmKey: 'imm.terraform.tfstate'
+  backendAzureRmResourceGroupName: 'pipeline'
+  backendAzureRmStorageAccountName: 'bakktsretfpipeline'
+
+stages:
+  - stage: Plan
+    condition: eq(variables['isMaster'], False)
+    jobs:
+    - job:
+      steps:
+      - template: '../../templates/runTerraformCommands.yaml'
+        parameters:
+            commands:
+            - validate
+            - plan
+            serviceConnection: $(serviceConnection)
+            tfVersion: $(tfVersion)
+            environmentDirectory: $(environmentDirectory)
+            backendAzureRmKey: $(backendAzureRmKey)
+            backendAzureRmResourceGroupName: $(backendAzureRmResourceGroupName)
+            backendAzureRmStorageAccountName: $(backendAzureRmStorageAccountName)
+
+  - stage: Apply
+    condition: eq(variables['isMaster'], True)
+    jobs:
+    - job:
+      steps:
+      - template: '../../templates/runTerraformCommands.yaml'
+        parameters:
+            commands:
+            - apply
+            serviceConnection: $(serviceConnection)
+            tfVersion: $(tfVersion)
+            environmentDirectory: $(environmentDirectory)
+            backendAzureRmKey: $(backendAzureRmKey)
+            backendAzureRmResourceGroupName: $(backendAzureRmResourceGroupName)
+            backendAzureRmStorageAccountName: $(backendAzureRmStorageAccountName)
